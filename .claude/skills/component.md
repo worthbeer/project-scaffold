@@ -28,6 +28,12 @@ export function ComponentName({ className, children }: Props) {
 }
 ```
 
+## Naming
+- **Folder + file + export**: all PascalCase — `DataTable/DataTable.tsx`, `export function DataTable`
+- **Test file**: matches component name — `DataTable.test.tsx`
+- **Types file**: `DataTable.types.ts` (only if the types are complex enough to split out)
+- See `SKILL.md` for naming rules in other contexts (hooks, utils, routes, etc.)
+
 ## Rules
 - Named exports only
 - `className` prop on every leaf component

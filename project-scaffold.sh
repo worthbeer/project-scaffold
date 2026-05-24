@@ -125,7 +125,7 @@ echo "▸ Writing Claude Code SKILL.md files..."
 
 # ── .claude/SKILL.md ───────────────────────────────────────────────
 cat > .claude/SKILL.md << 'SKILL'
-# Project Context for Claude Code
+# Project Scaffold — Claude Code Context
 
 ## Stack
 Next.js 14 App Router · TypeScript · Tailwind CSS · React 18
@@ -137,6 +137,24 @@ Always use path aliases, never relative imports across feature boundaries:
 - `@hooks/`       → `src/hooks/`
 - `@lib/`         → `src/lib/`
 - `@types/`       → `src/types/`
+
+## Naming Conventions
+Names follow the convention of the file type or language context — not a single global rule.
+
+| What | Convention | Example |
+|---|---|---|
+| React components (file + export) | PascalCase | `DataTable.tsx`, `export function DataTable` |
+| Component folder | PascalCase | `src/components/DataTable/` |
+| Hooks | camelCase with `use` prefix | `use-async.ts`, `export function useAsync` |
+| Utility functions / lib files | kebab-case filename, camelCase export | `src/lib/format-date.ts`, `export function formatDate` |
+| Route segments (Next.js App Router) | kebab-case | `src/app/user-profile/page.tsx` |
+| Config files & scripts | kebab-case | `jest.config.js`, `generate-component.js` |
+| TypeScript types and interfaces | PascalCase | `type AsyncState<T>`, `type WithClassName` |
+| Constants | SCREAMING_SNAKE_CASE | `const MAX_RETRIES = 3` |
+| CSS custom properties | kebab-case | `--muted-foreground` |
+| Environment variables | SCREAMING_SNAKE_CASE | `NEXT_PUBLIC_APP_URL` |
+
+**Why:** Each ecosystem has its own convention — React components are PascalCase so JSX can distinguish them from HTML elements; Next.js file routing is kebab-case to match URL conventions; TypeScript types are PascalCase to mirror class naming; CSS and shell tools use kebab-case by convention. Mixing conventions within a context is a bug.
 
 ## Conventions
 See `.claude/skills/` for component, API, and testing patterns.
@@ -180,6 +198,12 @@ export function ComponentName({ className, children }: Props) {
   );
 }
 ```
+
+## Naming
+- **Folder + file + export**: all PascalCase — `DataTable/DataTable.tsx`, `export function DataTable`
+- **Test file**: matches component name — `DataTable.test.tsx`
+- **Types file**: `DataTable.types.ts` (only if the types are complex enough to split out)
+- See `SKILL.md` for naming rules in other contexts (hooks, utils, routes, etc.)
 
 ## Rules
 - Named exports only
@@ -299,7 +323,7 @@ const write = (filePath, content) => {
 };
 const commit = (msg) => {
   execSync("git add -A");
-  execSync(`git commit -m "${msg}"`);
+  execSync("git commit -F -", { input: msg });
 };
 
 async function main() {
@@ -530,7 +554,7 @@ if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
 
 try {
   execSync("git add -A");
-  execSync(`git commit -m "feat: add ${name} component"`);
+  execSync("git commit -F -", { input: `feat: add ${name} component` });
 } catch {}
 
 console.log(`

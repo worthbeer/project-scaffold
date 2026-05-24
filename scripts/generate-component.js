@@ -73,7 +73,7 @@ if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
 
 try {
   execSync("git add -A");
-  execSync(`git commit -m "feat: add ${name} component"`);
+  execSync("git commit -F -", { input: `feat: add ${name} component` });
 } catch {}
 
 console.log(`

@@ -15,7 +15,7 @@ const write = (filePath, content) => {
 };
 const commit = (msg) => {
   execSync("git add -A");
-  execSync(`git commit -m "${msg}"`);
+  execSync("git commit -F -", { input: msg });
 };
 
 async function main() {
