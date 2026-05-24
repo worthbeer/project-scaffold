@@ -16,6 +16,8 @@
 ### Fixed
 - `commit()` in `scripts/scaffold.js` and `scripts/generate-component.js` now pipes the message via `git commit -F -` instead of interpolating into `-m "..."` — prevents shell injection if the message contains quotes or special characters
 - Same fix applied to both script copies inside `project-scaffold.sh` installer heredocs
+- `git config user.name/email` in `scaffold.js` now uses `spawnSync` with an args array instead of shell interpolation — same class of injection risk as ADR-004 (quoted names or emails with special characters would have broken the command)
+- `jest.setup.js` is now wired into `jest.config.js` via `setupFilesAfterEnv` — jest-dom matchers (`toHaveClass`, `toBeInTheDocument`, etc.) were silently missing from component tests despite the setup file existing
 - `generate-readme.js` now reads `pkg.description` for the Problem Statement section instead of writing a static placeholder — description is persisted to `package.json` at scaffold time
 - Added `.eslintrc.json` (`extends: next/core-web-vitals`) so `npm run lint` works out of the box
 - Installer (`project-scaffold.sh`) now guards README.md write with `[ ! -f README.md ]` — re-running the installer no longer overwrites an existing README

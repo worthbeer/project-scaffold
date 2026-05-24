@@ -308,7 +308,7 @@ echo "▸ Writing scaffold scripts..."
 cat > scripts/scaffold.js << 'SCAFFOLD'
 #!/usr/bin/env node
 
-const { execSync } = require("child_process");
+const { execSync, spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
@@ -389,8 +389,8 @@ async function main() {
   console.log("\n▸ Initializing git...");
   if (!fs.existsSync(path.join(root, ".git"))) {
     run("git init");
-    run(`git config user.name "${authorName}"`);
-    run(`git config user.email "${authorEmail}"`);
+    spawnSync("git", ["config", "user.name", authorName], { stdio: "inherit" });
+    spawnSync("git", ["config", "user.email", authorEmail], { stdio: "inherit" });
   }
 
   console.log("▸ Writing package.json...");
@@ -451,7 +451,7 @@ async function main() {
 
   write("next.config.js", `/** @type {import('next').NextConfig} */\nconst nextConfig = {};\nmodule.exports = nextConfig;\n`);
   write("postcss.config.js", `module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };\n`);
-  write("jest.config.js", `const nextJest = require("next/jest");\nconst createJestConfig = nextJest({ dir: "./" });\nconst config = {\n  testEnvironment: "jest-environment-jsdom",\n  moduleNameMapper: {\n    "^@/(.*)\$": "<rootDir>/src/\$1",\n    "^@components/(.*)\$": "<rootDir>/src/components/\$1",\n    "^@hooks/(.*)\$": "<rootDir>/src/hooks/\$1",\n    "^@lib/(.*)\$": "<rootDir>/src/lib/\$1",\n    "^@types/(.*)\$": "<rootDir>/src/types/\$1",\n  },\n};\nmodule.exports = createJestConfig(config);\n`);
+  write("jest.config.js", `const nextJest = require("next/jest");\nconst createJestConfig = nextJest({ dir: "./" });\nconst config = {\n  testEnvironment: "jest-environment-jsdom",\n  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],\n  moduleNameMapper: {\n    "^@/(.*)\$": "<rootDir>/src/\$1",\n    "^@components/(.*)\$": "<rootDir>/src/components/\$1",\n    "^@hooks/(.*)\$": "<rootDir>/src/hooks/\$1",\n    "^@lib/(.*)\$": "<rootDir>/src/lib/\$1",\n    "^@types/(.*)\$": "<rootDir>/src/types/\$1",\n  },\n};\nmodule.exports = createJestConfig(config);\n`);
   write("jest.setup.js", `import "@testing-library/jest-dom";\n`);
   write("src/components/index.ts", `// Component barrel — updated automatically by generate-component.js\n`);
 
