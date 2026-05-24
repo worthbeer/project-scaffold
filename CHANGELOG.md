@@ -32,3 +32,7 @@
 
 ### Fixed
 - `scaffold.js` now interleaves `write()` calls with `commit()` calls — previously all files were written before any commit, so only the first `git add -A` staged anything and every subsequent commit failed with "nothing to commit"; each commit now lands exactly the files it describes
+
+### Added
+- `.github/workflows/ci.yml` written into every generated project — runs `lint`, `type-check`, and `test` as parallel jobs on push/PR to main
+- `.github/workflows/ci.yml` added to the project-scaffold repo itself — runs `npm test` (the 43 unit tests) on push/PR to main

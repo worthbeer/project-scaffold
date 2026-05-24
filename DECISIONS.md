@@ -52,6 +52,18 @@ The three generator scripts (`scaffold.js`, `generate-component.js`, `generate-r
 **When to add E2E tests and how to approach it:**
 Consider adding E2E tests when: (1) the generated app has multiple interacting routes or components that form a critical user flow, (2) there is a CI pipeline to run them on, and (3) unit/component tests are stable and not catching enough regressions.
 
+## ADR-006: Parallel CI Jobs for Generated Projects
+**Date:** 2026-05-24
+**Status:** Accepted
+
+Generated projects get three parallel GitHub Actions jobs (`lint`, `type-check`, `test`) rather than one sequential job. Each job checks out the repo and runs `npm ci` independently.
+
+**Why parallel:** The three checks are independent and take similar time (~30–60s each). Running them in parallel cuts wall-clock feedback time by ~2/3 on pull requests. The extra `npm ci` per job is negligible on GitHub Actions runners where the cache is shared via `actions/setup-node` with `cache: 'npm'`.
+
+**Why separate the project-scaffold repo's CI:** The project-scaffold repo only runs unit tests (`npx jest scripts/__tests__`), not lint or type-check — it has no TypeScript files outside of the generated project templates, and the Next.js ESLint config targets `src/` which doesn't exist in this repo.
+
+---
+
 The recommended approach:
 - Use **Playwright** (`@playwright/test`) — faster than Cypress for Next.js, first-class TypeScript support, no electron dependency
 - Tests live in `e2e/` at the project root, separate from `src/` unit tests
