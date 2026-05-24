@@ -65,7 +65,7 @@ Next.js 14 App Router · TypeScript · Tailwind CSS · React 18 · Jest + RTL + 
 
 ## This Repo
 
-43 unit tests · 7 architecture decisions documented in [DECISIONS.md](./DECISIONS.md)
+49 unit tests · 7 architecture decisions documented in [DECISIONS.md](./DECISIONS.md)
 
 The three generator scripts export their core functions and guard CLI execution with `require.main === module` so they can be unit-tested without side effects. Tests use real temp directories (`fs.mkdtempSync`) — no mocked filesystem.
 

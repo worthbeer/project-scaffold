@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- `generate-component.test.js` — end-to-end CLI tests covering file creation, barrel update, git commit, invalid name (exit 1), and duplicate component (exit 1); test count now 49
+
 ### Changed
 - README overhauled — covers what gets generated, seeded git history rationale, PR reviewer, stack, and testing approach
 - DECISIONS.md completed — added ADR-003 through ADR-007 (real FS tests, shell-safe subprocesses, seeded history, CI in scaffold, Claude CLI reviewer)

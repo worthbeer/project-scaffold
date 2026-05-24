@@ -3,7 +3,22 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const { validateName, componentTemplate, testTemplate, barrelTemplate, updateBarrel } = require("../generate-component");
+
+const SCRIPT = path.join(__dirname, "..", "generate-component.js");
+
+function makeProjectDir() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gen-component-e2e-"));
+  spawnSync("git", ["init"], { cwd: dir });
+  spawnSync("git", ["config", "user.name", "Test"], { cwd: dir });
+  spawnSync("git", ["config", "user.email", "test@test.com"], { cwd: dir });
+  fs.mkdirSync(path.join(dir, "src", "components"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "src", "components", "index.ts"), "// barrel\n");
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  spawnSync("git", ["commit", "-m", "initial"], { cwd: dir });
+  return dir;
+}
 
 describe("validateName", () => {
   it("returns error for missing name", () => {
@@ -101,5 +116,51 @@ describe("updateBarrel", () => {
     const content = fs.readFileSync(tmpFile, "utf8");
     expect(content).toContain('export * from "./Button";\n');
     expect(content).toContain('export * from "./Card";\n');
+  });
+});
+
+describe("CLI — end-to-end", () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = makeProjectDir(); });
+  afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it("creates component, test, and index files", () => {
+    const result = spawnSync("node", [SCRIPT, "Button"], { cwd: tmpDir, encoding: "utf8" });
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(tmpDir, "src", "components", "Button", "Button.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "src", "components", "Button", "Button.test.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, "src", "components", "Button", "index.ts"))).toBe(true);
+  });
+
+  it("component file contains the named export", () => {
+    spawnSync("node", [SCRIPT, "DataTable"], { cwd: tmpDir, encoding: "utf8" });
+    const content = fs.readFileSync(path.join(tmpDir, "src", "components", "DataTable", "DataTable.tsx"), "utf8");
+    expect(content).toContain("export function DataTable");
+  });
+
+  it("updates the barrel index", () => {
+    spawnSync("node", [SCRIPT, "Card"], { cwd: tmpDir, encoding: "utf8" });
+    const barrel = fs.readFileSync(path.join(tmpDir, "src", "components", "index.ts"), "utf8");
+    expect(barrel).toContain('export * from "./Card"');
+  });
+
+  it("commits the component to git", () => {
+    spawnSync("node", [SCRIPT, "Modal"], { cwd: tmpDir, encoding: "utf8" });
+    const log = spawnSync("git", ["log", "--oneline"], { cwd: tmpDir, encoding: "utf8" });
+    expect(log.stdout).toContain("feat: add Modal component");
+  });
+
+  it("exits 1 with a PascalCase error for an invalid name", () => {
+    const result = spawnSync("node", [SCRIPT, "myComponent"], { cwd: tmpDir, encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("PascalCase");
+  });
+
+  it("exits 1 when the component already exists", () => {
+    spawnSync("node", [SCRIPT, "Button"], { cwd: tmpDir, encoding: "utf8" });
+    const result = spawnSync("node", [SCRIPT, "Button"], { cwd: tmpDir, encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("already exists");
   });
 });
