@@ -188,6 +188,7 @@ async function main() {
 ║  ✓ Scaffold complete                 ║
 ║                                      ║
 ║  npm run dev                         ║
+║  CI: lint · type-check · test        ║
 ║  Task: 📦 Generate Component         ║
 ║  Task: 📝 Refresh README             ║
 ╚══════════════════════════════════════╝

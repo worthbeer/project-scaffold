@@ -78,13 +78,20 @@ ${decisions}
 
 Full reasoning in [DECISIONS.md](./DECISIONS.md).
 
+## CI
+
+GitHub Actions runs on every push and pull request to \`main\`:
+
+- **lint** · **type-check** · **test** (parallel jobs)
+
+See \`.github/workflows/ci.yml\`.
+
 ## Trade-offs & What I'd Do Next
 
 _Fill this in before submitting._
 
 - [ ] Add Storybook or \`/design-system\` route for component docs
 - [ ] Add E2E tests with Playwright for critical flows
-- [ ] Set up CI with GitHub Actions (lint → type-check → test)
 - [ ] Add error boundaries per route segment
 
 ## Environment Variables
