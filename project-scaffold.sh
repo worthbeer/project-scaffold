@@ -313,43 +313,24 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
-const write = (filePath, content) => {
+
+function write(filePath, content) {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(filePath, content, "utf8");
-};
-const commit = (msg) => {
+}
+
+function commit(msg) {
   execSync("git add -A");
   execSync("git commit -F -", { input: msg });
-};
+}
 
-async function main() {
-  console.log("\n╔══════════════════════════════════╗");
-  console.log("║     Project Scaffold Workflow     ║");
-  console.log("╚══════════════════════════════════╝\n");
-
-  const projectName    = await ask("Project name (kebab-case): ");
-  const problemStatement = await ask("One-line problem statement: ");
-  const authorName     = await ask("Your name: ");
-  const authorEmail    = await ask("Your email: ");
-  rl.close();
-
-  const root = process.cwd();
-
-  console.log("\n▸ Initializing git...");
-  if (!fs.existsSync(path.join(root, ".git"))) {
-    run("git init");
-    run(`git config user.name "${authorName}"`);
-    run(`git config user.email "${authorEmail}"`);
-  }
-
-  console.log("▸ Writing package.json...");
-  write("package.json", JSON.stringify({
+function buildPackageJson(projectName, problemStatement) {
+  return {
     name: projectName,
     version: "0.1.0",
+    description: problemStatement,
     private: true,
     scripts: {
       dev: "next dev",
@@ -383,9 +364,37 @@ async function main() {
       jest: "^29.7.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
+      "@testing-library/user-event": "^14.5.2",
       "jest-environment-jsdom": "^29.7.0",
     },
-  }, null, 2));
+  };
+}
+
+async function main() {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q) => new Promise((res) => rl.question(q, res));
+
+  console.log("\n╔══════════════════════════════════╗");
+  console.log("║     Project Scaffold Workflow     ║");
+  console.log("╚══════════════════════════════════╝\n");
+
+  const projectName      = await ask("Project name (kebab-case): ");
+  const problemStatement = await ask("One-line problem statement: ");
+  const authorName       = await ask("Your name: ");
+  const authorEmail      = await ask("Your email: ");
+  rl.close();
+
+  const root = process.cwd();
+
+  console.log("\n▸ Initializing git...");
+  if (!fs.existsSync(path.join(root, ".git"))) {
+    run("git init");
+    run(`git config user.name "${authorName}"`);
+    run(`git config user.email "${authorEmail}"`);
+  }
+
+  console.log("▸ Writing package.json...");
+  write("package.json", JSON.stringify(buildPackageJson(projectName, problemStatement), null, 2));
 
   write("tsconfig.json", JSON.stringify({
     compilerOptions: {
@@ -420,6 +429,7 @@ async function main() {
   write(".env.local", `# Local env — not committed\n`);
   write(".gitignore", `/node_modules\n/.next\n/out\n.env.local\n.env*.local\n*.tsbuildinfo\n.DS_Store\n`);
   write(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, tabWidth: 2, trailingComma: "es5", printWidth: 100 }, null, 2));
+  write(".eslintrc.json", JSON.stringify({ extends: ["next/core-web-vitals"] }, null, 2));
 
   write("DECISIONS.md", `# Architecture Decision Log\n\n## ADR-001: Next.js App Router\n**Date:** ${new Date().toISOString().split("T")[0]}\n**Status:** Accepted\n\nRSC for data-heavy pages, client components scoped to interactive UI only.\n\n## ADR-002: Tailwind CSS\n**Date:** ${new Date().toISOString().split("T")[0]}\n**Status:** Accepted\n\nTokens in tailwind.config.ts. cn() utility for class composition.\n`);
 
@@ -471,10 +481,14 @@ async function main() {
 `);
 }
 
-main().catch((err) => {
-  console.error("\n✗ Scaffold failed:", err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("\n✗ Scaffold failed:", err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { write, buildPackageJson };
 SCAFFOLD
 
 # ── scripts/generate-component.js ─────────────────────────────────
@@ -485,29 +499,14 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const name = process.argv[2];
-
-if (!name) {
-  console.error("✗ Usage: node scripts/generate-component.js ComponentName");
-  process.exit(1);
+function validateName(name) {
+  if (!name) return "Usage: node scripts/generate-component.js ComponentName";
+  if (!/^[A-Z][A-Za-z0-9]+$/.test(name)) return "Component name must be PascalCase (e.g. DataTable)";
+  return null;
 }
 
-if (!/^[A-Z][A-Za-z0-9]+$/.test(name)) {
-  console.error("✗ Component name must be PascalCase (e.g. DataTable)");
-  process.exit(1);
-}
-
-const componentDir = path.join("src", "components", name);
-
-if (fs.existsSync(componentDir)) {
-  console.error(`✗ Component "${name}" already exists`);
-  process.exit(1);
-}
-
-fs.mkdirSync(componentDir, { recursive: true });
-
-fs.writeFileSync(path.join(componentDir, `${name}.tsx`),
-`import { cn } from "@lib/utils";
+function componentTemplate(name) {
+  return `import { cn } from "@lib/utils";
 
 type ${name}Props = {
   className?: string;
@@ -521,10 +520,11 @@ export function ${name}({ className, children }: ${name}Props) {
     </div>
   );
 }
-`);
+`;
+}
 
-fs.writeFileSync(path.join(componentDir, `${name}.test.tsx`),
-`import { render, screen } from "@testing-library/react";
+function testTemplate(name) {
+  return `import { render, screen } from "@testing-library/react";
 import { ${name} } from "./${name}";
 
 describe("${name}", () => {
@@ -542,22 +542,48 @@ describe("${name}", () => {
     expect(screen.getByText("content")).toBeInTheDocument();
   });
 });
-`);
+`;
+}
 
-fs.writeFileSync(path.join(componentDir, "index.ts"),
-`export { ${name} } from "./${name}";\n`);
+function barrelTemplate(name) {
+  return `export { ${name} } from "./${name}";\n`;
+}
 
-const barrelPath = path.join("src", "components", "index.ts");
-const barrel = fs.readFileSync(barrelPath, "utf8");
-const exportLine = `export * from "./${name}";\n`;
-if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
+function updateBarrel(barrelPath, name) {
+  const barrel = fs.readFileSync(barrelPath, "utf8");
+  const exportLine = `export * from "./${name}";\n`;
+  if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
+}
 
-try {
-  execSync("git add -A");
-  execSync("git commit -F -", { input: `feat: add ${name} component` });
-} catch {}
+if (require.main === module) {
+  const name = process.argv[2];
 
-console.log(`
+  const error = validateName(name);
+  if (error) {
+    console.error(`✗ ${error}`);
+    process.exit(1);
+  }
+
+  const componentDir = path.join("src", "components", name);
+
+  if (fs.existsSync(componentDir)) {
+    console.error(`✗ Component "${name}" already exists`);
+    process.exit(1);
+  }
+
+  fs.mkdirSync(componentDir, { recursive: true });
+  fs.writeFileSync(path.join(componentDir, `${name}.tsx`), componentTemplate(name));
+  fs.writeFileSync(path.join(componentDir, `${name}.test.tsx`), testTemplate(name));
+  fs.writeFileSync(path.join(componentDir, "index.ts"), barrelTemplate(name));
+
+  updateBarrel(path.join("src", "components", "index.ts"), name);
+
+  try {
+    execSync("git add -A");
+    execSync("git commit -F -", { input: `feat: add ${name} component` });
+  } catch {}
+
+  console.log(`
 ✓ Generated ${name}
 
   src/components/${name}/
@@ -565,6 +591,9 @@ console.log(`
     ${name}.test.tsx
     index.ts
 `);
+}
+
+module.exports = { validateName, componentTemplate, testTemplate, barrelTemplate, updateBarrel };
 GENCOMP
 
 # ── scripts/generate-readme.js ────────────────────────────────────
@@ -573,16 +602,6 @@ cat > scripts/generate-readme.js << 'GENREADME'
 
 const fs = require("fs");
 const path = require("path");
-
-const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const projectName = pkg.name.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-
-let decisions = "_See DECISIONS.md_";
-if (fs.existsSync("DECISIONS.md")) {
-  const raw = fs.readFileSync("DECISIONS.md", "utf8");
-  const titles = [...raw.matchAll(/^## (ADR-\d+: .+)$/gm)].map(m => `- ${m[1]}`);
-  if (titles.length) decisions = titles.join("\n");
-}
 
 function mapDir(dir, indent = 0) {
   if (!fs.existsSync(dir)) return "";
@@ -595,8 +614,8 @@ function mapDir(dir, indent = 0) {
     .join("\n");
 }
 
-function countComponents() {
-  const d = path.join("src", "components");
+function countComponents(baseDir = process.cwd()) {
+  const d = path.join(baseDir, "src", "components");
   if (!fs.existsSync(d)) return 0;
   return fs.readdirSync(d, { withFileTypes: true }).filter(i => i.isDirectory()).length;
 }
@@ -611,27 +630,14 @@ function countTests(dir) {
   return n;
 }
 
-const srcTree = mapDir("src");
-const componentCount = countComponents();
-const testCount = countTests("src");
-const today = new Date().toISOString().split("T")[0];
-
-const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-const stack = [
-  deps.next && `Next.js ${deps.next.replace(/[\^~]/, "")}`,
-  deps.react && `React ${deps.react.replace(/[\^~]/, "")}`,
-  deps.typescript && `TypeScript ${deps.typescript.replace(/[\^~]/, "")}`,
-  deps.tailwindcss && "Tailwind CSS",
-  deps.jest && "Jest + React Testing Library",
-].filter(Boolean).join(" · ");
-
-const readme = `# ${projectName}
+function buildReadme({ projectName, problemStatement, stack, srcTree, componentCount, testCount, decisions, today }) {
+  return `# ${projectName}
 
 > Last generated: ${today}
 
 ## Problem Statement
 
-_Fill in from your take-home prompt._
+${problemStatement || "_Fill in from your take-home prompt._"}
 
 ## Quick Start
 
@@ -689,12 +695,43 @@ Copy \`.env.example\` to \`.env.local\`. Never commit \`.env.local\`.
 
 _README generated by \`scripts/generate-readme.js\` — run "📝 Refresh README" task to update._
 `;
+}
 
-fs.writeFileSync("README.md", readme, "utf8");
-console.log("✓ README.md updated");
+if (require.main === module) {
+  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const projectName = pkg.name.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const problemStatement = pkg.description || "";
+
+  let decisions = "_See DECISIONS.md_";
+  if (fs.existsSync("DECISIONS.md")) {
+    const raw = fs.readFileSync("DECISIONS.md", "utf8");
+    const titles = [...raw.matchAll(/^## (ADR-\d+: .+)$/gm)].map(m => `- ${m[1]}`);
+    if (titles.length) decisions = titles.join("\n");
+  }
+
+  const srcTree = mapDir("src");
+  const componentCount = countComponents(process.cwd());
+  const testCount = countTests("src");
+  const today = new Date().toISOString().split("T")[0];
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  const stack = [
+    deps.next && `Next.js ${deps.next.replace(/[\^~]/, "")}`,
+    deps.react && `React ${deps.react.replace(/[\^~]/, "")}`,
+    deps.typescript && `TypeScript ${deps.typescript.replace(/[\^~]/, "")}`,
+    deps.tailwindcss && "Tailwind CSS",
+    deps.jest && "Jest + React Testing Library",
+  ].filter(Boolean).join(" · ");
+
+  const readme = buildReadme({ projectName, problemStatement, stack, srcTree, componentCount, testCount, decisions, today });
+  fs.writeFileSync("README.md", readme, "utf8");
+  console.log("✓ README.md updated");
+}
+
+module.exports = { mapDir, countComponents, countTests, buildReadme };
 GENREADME
 
 # ── Root README ────────────────────────────────────────────────────
+if [ ! -f README.md ]; then
 cat > README.md << 'ROOTREADME'
 # project-scaffold
 
@@ -721,6 +758,7 @@ code .                     # open in VS Code
 - npm  
 - git
 ROOTREADME
+fi
 
 echo ""
 echo "╔══════════════════════════════════════╗"

@@ -4,29 +4,14 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const name = process.argv[2];
-
-if (!name) {
-  console.error("✗ Usage: node scripts/generate-component.js ComponentName");
-  process.exit(1);
+function validateName(name) {
+  if (!name) return "Usage: node scripts/generate-component.js ComponentName";
+  if (!/^[A-Z][A-Za-z0-9]+$/.test(name)) return "Component name must be PascalCase (e.g. DataTable)";
+  return null;
 }
 
-if (!/^[A-Z][A-Za-z0-9]+$/.test(name)) {
-  console.error("✗ Component name must be PascalCase (e.g. DataTable)");
-  process.exit(1);
-}
-
-const componentDir = path.join("src", "components", name);
-
-if (fs.existsSync(componentDir)) {
-  console.error(`✗ Component "${name}" already exists`);
-  process.exit(1);
-}
-
-fs.mkdirSync(componentDir, { recursive: true });
-
-fs.writeFileSync(path.join(componentDir, `${name}.tsx`),
-`import { cn } from "@lib/utils";
+function componentTemplate(name) {
+  return `import { cn } from "@lib/utils";
 
 type ${name}Props = {
   className?: string;
@@ -40,10 +25,11 @@ export function ${name}({ className, children }: ${name}Props) {
     </div>
   );
 }
-`);
+`;
+}
 
-fs.writeFileSync(path.join(componentDir, `${name}.test.tsx`),
-`import { render, screen } from "@testing-library/react";
+function testTemplate(name) {
+  return `import { render, screen } from "@testing-library/react";
 import { ${name} } from "./${name}";
 
 describe("${name}", () => {
@@ -61,22 +47,48 @@ describe("${name}", () => {
     expect(screen.getByText("content")).toBeInTheDocument();
   });
 });
-`);
+`;
+}
 
-fs.writeFileSync(path.join(componentDir, "index.ts"),
-`export { ${name} } from "./${name}";\n`);
+function barrelTemplate(name) {
+  return `export { ${name} } from "./${name}";\n`;
+}
 
-const barrelPath = path.join("src", "components", "index.ts");
-const barrel = fs.readFileSync(barrelPath, "utf8");
-const exportLine = `export * from "./${name}";\n`;
-if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
+function updateBarrel(barrelPath, name) {
+  const barrel = fs.readFileSync(barrelPath, "utf8");
+  const exportLine = `export * from "./${name}";\n`;
+  if (!barrel.includes(exportLine)) fs.appendFileSync(barrelPath, exportLine);
+}
 
-try {
-  execSync("git add -A");
-  execSync("git commit -F -", { input: `feat: add ${name} component` });
-} catch {}
+if (require.main === module) {
+  const name = process.argv[2];
 
-console.log(`
+  const error = validateName(name);
+  if (error) {
+    console.error(`✗ ${error}`);
+    process.exit(1);
+  }
+
+  const componentDir = path.join("src", "components", name);
+
+  if (fs.existsSync(componentDir)) {
+    console.error(`✗ Component "${name}" already exists`);
+    process.exit(1);
+  }
+
+  fs.mkdirSync(componentDir, { recursive: true });
+  fs.writeFileSync(path.join(componentDir, `${name}.tsx`), componentTemplate(name));
+  fs.writeFileSync(path.join(componentDir, `${name}.test.tsx`), testTemplate(name));
+  fs.writeFileSync(path.join(componentDir, "index.ts"), barrelTemplate(name));
+
+  updateBarrel(path.join("src", "components", "index.ts"), name);
+
+  try {
+    execSync("git add -A");
+    execSync("git commit -F -", { input: `feat: add ${name} component` });
+  } catch {}
+
+  console.log(`
 ✓ Generated ${name}
 
   src/components/${name}/
@@ -84,3 +96,6 @@ console.log(`
     ${name}.test.tsx
     index.ts
 `);
+}
+
+module.exports = { validateName, componentTemplate, testTemplate, barrelTemplate, updateBarrel };

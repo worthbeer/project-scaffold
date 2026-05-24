@@ -5,43 +5,24 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
-const write = (filePath, content) => {
+
+function write(filePath, content) {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(filePath, content, "utf8");
-};
-const commit = (msg) => {
+}
+
+function commit(msg) {
   execSync("git add -A");
   execSync("git commit -F -", { input: msg });
-};
+}
 
-async function main() {
-  console.log("\n╔══════════════════════════════════╗");
-  console.log("║     Project Scaffold Workflow     ║");
-  console.log("╚══════════════════════════════════╝\n");
-
-  const projectName    = await ask("Project name (kebab-case): ");
-  const problemStatement = await ask("One-line problem statement: ");
-  const authorName     = await ask("Your name: ");
-  const authorEmail    = await ask("Your email: ");
-  rl.close();
-
-  const root = process.cwd();
-
-  console.log("\n▸ Initializing git...");
-  if (!fs.existsSync(path.join(root, ".git"))) {
-    run("git init");
-    run(`git config user.name "${authorName}"`);
-    run(`git config user.email "${authorEmail}"`);
-  }
-
-  console.log("▸ Writing package.json...");
-  write("package.json", JSON.stringify({
+function buildPackageJson(projectName, problemStatement) {
+  return {
     name: projectName,
     version: "0.1.0",
+    description: problemStatement,
     private: true,
     scripts: {
       dev: "next dev",
@@ -75,9 +56,37 @@ async function main() {
       jest: "^29.7.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
+      "@testing-library/user-event": "^14.5.2",
       "jest-environment-jsdom": "^29.7.0",
     },
-  }, null, 2));
+  };
+}
+
+async function main() {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q) => new Promise((res) => rl.question(q, res));
+
+  console.log("\n╔══════════════════════════════════╗");
+  console.log("║     Project Scaffold Workflow     ║");
+  console.log("╚══════════════════════════════════╝\n");
+
+  const projectName      = await ask("Project name (kebab-case): ");
+  const problemStatement = await ask("One-line problem statement: ");
+  const authorName       = await ask("Your name: ");
+  const authorEmail      = await ask("Your email: ");
+  rl.close();
+
+  const root = process.cwd();
+
+  console.log("\n▸ Initializing git...");
+  if (!fs.existsSync(path.join(root, ".git"))) {
+    run("git init");
+    run(`git config user.name "${authorName}"`);
+    run(`git config user.email "${authorEmail}"`);
+  }
+
+  console.log("▸ Writing package.json...");
+  write("package.json", JSON.stringify(buildPackageJson(projectName, problemStatement), null, 2));
 
   write("tsconfig.json", JSON.stringify({
     compilerOptions: {
@@ -112,6 +121,7 @@ async function main() {
   write(".env.local", `# Local env — not committed\n`);
   write(".gitignore", `/node_modules\n/.next\n/out\n.env.local\n.env*.local\n*.tsbuildinfo\n.DS_Store\n`);
   write(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, tabWidth: 2, trailingComma: "es5", printWidth: 100 }, null, 2));
+  write(".eslintrc.json", JSON.stringify({ extends: ["next/core-web-vitals"] }, null, 2));
 
   write("DECISIONS.md", `# Architecture Decision Log\n\n## ADR-001: Next.js App Router\n**Date:** ${new Date().toISOString().split("T")[0]}\n**Status:** Accepted\n\nRSC for data-heavy pages, client components scoped to interactive UI only.\n\n## ADR-002: Tailwind CSS\n**Date:** ${new Date().toISOString().split("T")[0]}\n**Status:** Accepted\n\nTokens in tailwind.config.ts. cn() utility for class composition.\n`);
 
@@ -163,7 +173,11 @@ async function main() {
 `);
 }
 
-main().catch((err) => {
-  console.error("\n✗ Scaffold failed:", err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("\n✗ Scaffold failed:", err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { write, buildPackageJson };
