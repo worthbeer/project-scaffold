@@ -54,7 +54,6 @@ function buildPackageJson(projectName, problemStatement) {
       eslint: "^8.57.0",
       "eslint-config-next": "^14.2.0",
       prettier: "^3.2.5",
-      "@anthropic-ai/sdk": "^0.39.0",
       jest: "^29.7.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
@@ -140,7 +139,7 @@ async function main() {
   }, null, 2));
 
   write(".npmrc", `save-exact=true\naudit-level=high\nfund=false\n`);
-  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\nANTHROPIC_API_KEY=           # needed for npm run review\n`);
+  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\n`);
   write(".env.local", `# Local env — not committed\n`);
   write(".gitignore", `/node_modules\n/.next\n/out\n.env.local\n.env*.local\n*.tsbuildinfo\n.DS_Store\n`);
   write(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, tabWidth: 2, trailingComma: "es5", printWidth: 100 }, null, 2));

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-// CI-only script: reads a unified diff from stdin, streams a code review
-// to stdout via the Anthropic API.
-// Usage: gh pr diff <number> | node scripts/pr-review.js
-//
-// Requires ANTHROPIC_API_KEY environment variable.
+// PR reviewer: reads a unified diff from stdin and streams a structured
+// code review via the claude CLI (uses Claude Code's existing auth).
+// Usage: git diff main...HEAD | node scripts/pr-review.js
+
+const { spawn } = require("child_process");
 
 const SYSTEM_PROMPT = `You are an expert code reviewer specializing in Next.js App Router, React 18+, and TypeScript. You will be given a unified diff. Analyze ONLY the changed lines (starting with + or -), not the context lines.
 
@@ -59,13 +59,6 @@ Omit \`file:line\` for architectural issues with no single source line.
 Be direct and specific. Reference actual code from the diff. If the diff is clean, say so concisely.`;
 
 async function main() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error("ANTHROPIC_API_KEY is not set.");
-    console.error("Add it to .env.local or export it in your shell profile (~/.zshrc or ~/.bashrc).");
-    process.exit(1);
-  }
-
   const chunks = [];
   for await (const chunk of process.stdin) {
     chunks.push(chunk);
@@ -91,37 +84,30 @@ async function main() {
     )
     .join("\n");
 
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const client = new Anthropic({ apiKey });
+  const userMessage = `Review this pull request diff:\n\n\`\`\`diff\n${diff}\n\`\`\``;
 
   process.stdout.write("## Claude Code Review\n\n");
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: `Review this pull request diff:\n\n\`\`\`diff\n${diff}\n\`\`\``,
-      },
-    ],
-  });
+  await new Promise((resolve, reject) => {
+    const proc = spawn(
+      "claude",
+      [
+        "--print",
+        "--no-session-persistence",
+        "--system-prompt", SYSTEM_PROMPT,
+        "--model", "sonnet",
+        userMessage,
+      ],
+      { stdio: ["ignore", "pipe", "inherit"] }
+    );
 
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      process.stdout.write(event.delta.text);
-    }
-  }
+    proc.stdout.pipe(process.stdout);
+
+    proc.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`claude exited with code ${code}`));
+    });
+  });
 
   process.stdout.write("\n");
 }

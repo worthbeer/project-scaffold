@@ -373,7 +373,6 @@ function buildPackageJson(projectName, problemStatement) {
       eslint: "^8.57.0",
       "eslint-config-next": "^14.2.0",
       prettier: "^3.2.5",
-      "@anthropic-ai/sdk": "^0.39.0",
       jest: "^29.7.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
@@ -459,7 +458,7 @@ async function main() {
   }, null, 2));
 
   write(".npmrc", `save-exact=true\naudit-level=high\nfund=false\n`);
-  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\nANTHROPIC_API_KEY=           # needed for npm run review\n`);
+  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\n`);
   write(".env.local", `# Local env — not committed\n`);
   write(".gitignore", `/node_modules\n/.next\n/out\n.env.local\n.env*.local\n*.tsbuildinfo\n.DS_Store\n`);
   write(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, tabWidth: 2, trailingComma: "es5", printWidth: 100 }, null, 2));
@@ -767,11 +766,11 @@ GENREADME
 cat > scripts/pr-review.js << 'PRREVIEW'
 #!/usr/bin/env node
 
-// CI-only script: reads a unified diff from stdin, streams a code review
-// to stdout via the Anthropic API.
-// Usage: gh pr diff <number> | node scripts/pr-review.js
-//
-// Requires ANTHROPIC_API_KEY environment variable.
+// PR reviewer: reads a unified diff from stdin and streams a structured
+// code review via the claude CLI (uses Claude Code's existing auth).
+// Usage: git diff main...HEAD | node scripts/pr-review.js
+
+const { spawn } = require("child_process");
 
 const SYSTEM_PROMPT = `You are an expert code reviewer specializing in Next.js App Router, React 18+, and TypeScript. You will be given a unified diff. Analyze ONLY the changed lines (starting with + or -), not the context lines.
 
@@ -826,13 +825,6 @@ Omit \`file:line\` for architectural issues with no single source line.
 Be direct and specific. Reference actual code from the diff. If the diff is clean, say so concisely.`;
 
 async function main() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error("ANTHROPIC_API_KEY is not set.");
-    console.error("Add it to .env.local or export it in your shell profile (~/.zshrc or ~/.bashrc).");
-    process.exit(1);
-  }
-
   const chunks = [];
   for await (const chunk of process.stdin) {
     chunks.push(chunk);
@@ -846,7 +838,8 @@ async function main() {
 
   // Strip context lines — focus Claude on the actual changes
   const diff = rawDiff
-    .split("\n")
+    .split("
+")
     .filter(
       (l) =>
         l.startsWith("+") ||
@@ -856,47 +849,49 @@ async function main() {
         l.startsWith("---") ||
         l.startsWith("+++")
     )
-    .join("\n");
+    .join("
+");
 
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const client = new Anthropic({ apiKey });
+  const userMessage = `Review this pull request diff:
 
-  process.stdout.write("## Claude Code Review\n\n");
+\`\`\`diff
+${diff}
+\`\`\``;
 
-  const stream = client.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: `Review this pull request diff:\n\n\`\`\`diff\n${diff}\n\`\`\``,
-      },
-    ],
+  process.stdout.write("## Claude Code Review
+
+");
+
+  await new Promise((resolve, reject) => {
+    const proc = spawn(
+      "claude",
+      [
+        "--print",
+        "--no-session-persistence",
+        "--system-prompt", SYSTEM_PROMPT,
+        "--model", "sonnet",
+        userMessage,
+      ],
+      { stdio: ["ignore", "pipe", "inherit"] }
+    );
+
+    proc.stdout.pipe(process.stdout);
+
+    proc.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`claude exited with code ${code}`));
+    });
   });
 
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      process.stdout.write(event.delta.text);
-    }
-  }
-
-  process.stdout.write("\n");
+  process.stdout.write("
+");
 }
 
 main().catch((err) => {
   console.error("Review failed:", err.message);
   process.exit(1);
 });
+
 PRREVIEW
 
 # ── Root README ────────────────────────────────────────────────────

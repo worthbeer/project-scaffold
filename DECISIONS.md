@@ -60,13 +60,11 @@ Generated projects get an automated PR reviewer that posts a single summary comm
 
 **Why a single comment over inline comments:** Inline comments require parsing `file:line` references out of Claude's output and mapping them to the GitHub PR Review API's line model, which is fragile on large diffs and fails silently if the line reference is off by one. A single summary comment is simpler, more reliable, and carries the same information — the `file:line` references appear in the finding text so developers can navigate directly.
 
-**Why a script (pr-review.js) over a GitHub Action (uses: anthropics/...):** A local script is inspectable, forkable, and lets the system prompt be owned by the project. The prompt is tuned for Next.js App Router + React patterns drawn from real review sessions (see `CODE_REVIEW.md` in gen-digital/front-end-code-review-challenge). It covers architecture (god components, `'use client'` placement, direct browser-to-API calls, URL state), code quality (AbortController, `r.ok`, prop mutation, key stability), security (URL encoding, OWASP Top 10), and style (next/image, devDependencies classification, type safety, semantic HTML).
+**Why `claude` CLI over `@anthropic-ai/sdk`:** The `claude` CLI is already installed and authenticated on any machine running Claude Code. Using it means zero credential setup — no `ANTHROPIC_API_KEY` in `.env.local`, no GitHub secret, no SDK dependency in the generated project. The script calls `claude --print --no-session-persistence --system-prompt "..." --model sonnet "..."` and pipes stdout directly to the terminal.
 
-**Why `@anthropic-ai/sdk` in devDependencies:** The SDK is only needed in CI (via `npm ci` which installs devDependencies). It is never required at runtime in the browser or on the Next.js server.
+**Why a script (pr-review.js) over a GitHub Action:** A local script is inspectable, forkable, and lets the system prompt be owned by the project. The prompt is tuned for Next.js App Router + React patterns drawn from real review sessions (see `CODE_REVIEW.md` in gen-digital/front-end-code-review-challenge). It covers architecture (god components, `'use client'` placement, direct browser-to-API calls, URL state), code quality (AbortController, `r.ok`, prop mutation, key stability), security (URL encoding, OWASP Top 10), and style (next/image, devDependencies classification, type safety, semantic HTML).
 
-**Trigger:** Manual — `npm run review` or the `🔍 Review PR` VS Code task. The developer runs it locally before creating or merging a PR. The key stays in `.env.local` or shell profile and never touches GitHub.
-
-**To activate:** Add `ANTHROPIC_API_KEY` to `.env.local` or your shell profile (`~/.zshrc` or `~/.bashrc`). The key never leaves your machine.
+**Trigger:** Manual — `npm run review` or the `🔍 Review PR` VS Code task. The developer runs it locally before creating or merging a PR. No credentials required beyond Claude Code being installed.
 
 ---
 
