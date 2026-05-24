@@ -29,6 +29,11 @@ describe("buildPackageJson", () => {
     expect(pkg.devDependencies["eslint-config-next"]).toBeDefined();
   });
 
+  it("includes @anthropic-ai/sdk in devDependencies", () => {
+    const pkg = buildPackageJson("proj", "stmt");
+    expect(pkg.devDependencies["@anthropic-ai/sdk"]).toBeDefined();
+  });
+
   it("includes required npm scripts", () => {
     const pkg = buildPackageJson("proj", "stmt");
     expect(pkg.scripts.dev).toBe("next dev");

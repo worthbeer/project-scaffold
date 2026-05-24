@@ -53,6 +53,7 @@ function buildPackageJson(projectName, problemStatement) {
       eslint: "^8.57.0",
       "eslint-config-next": "^14.2.0",
       prettier: "^3.2.5",
+      "@anthropic-ai/sdk": "^0.39.0",
       jest: "^29.7.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
@@ -174,6 +175,9 @@ async function main() {
   write("jest.setup.js", `import "@testing-library/jest-dom";\n`);
   write(".github/workflows/ci.yml", `name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run lint\n\n  type-check:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run type-check\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm test\n`);
   commit("chore: configure tsconfig path aliases and jest");
+
+  write(".github/workflows/pr-review.yml", `name: PR Review\n\non:\n  pull_request:\n    types: [opened, synchronize, reopened]\n\njobs:\n  review:\n    runs-on: ubuntu-latest\n    permissions:\n      pull-requests: write\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - name: Get PR diff\n        run: gh pr diff \${{ github.event.number }} > /tmp/pr.diff\n        env:\n          GH_TOKEN: \${{ github.token }}\n      - name: Run Claude review\n        run: node scripts/pr-review.js < /tmp/pr.diff > /tmp/review.md\n        env:\n          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}\n      - name: Post review comment\n        run: gh pr comment \${{ github.event.number }} --body-file /tmp/review.md\n        env:\n          GH_TOKEN: \${{ github.token }}\n`);
+  commit("chore: add Claude PR reviewer");
 
   console.log("\n▸ Installing dependencies...");
   run("npm install");

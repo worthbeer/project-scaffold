@@ -52,6 +52,24 @@ The three generator scripts (`scaffold.js`, `generate-component.js`, `generate-r
 **When to add E2E tests and how to approach it:**
 Consider adding E2E tests when: (1) the generated app has multiple interacting routes or components that form a critical user flow, (2) there is a CI pipeline to run them on, and (3) unit/component tests are stable and not catching enough regressions.
 
+## ADR-007: Claude PR Reviewer Architecture
+**Date:** 2026-05-24
+**Status:** Accepted
+
+Generated projects get an automated PR reviewer that posts a single summary comment (not inline diff comments) on every PR.
+
+**Why a single comment over inline comments:** Inline comments require parsing `file:line` references out of Claude's output and mapping them to the GitHub PR Review API's line model, which is fragile on large diffs and fails silently if the line reference is off by one. A single summary comment is simpler, more reliable, and carries the same information — the `file:line` references appear in the finding text so developers can navigate directly.
+
+**Why a script (pr-review.js) over a GitHub Action (uses: anthropics/...):** A local script is inspectable, forkable, and lets the system prompt be owned by the project. The prompt is tuned for Next.js App Router + React patterns drawn from real review sessions (see `CODE_REVIEW.md` in gen-digital/front-end-code-review-challenge). It covers architecture (god components, `'use client'` placement, direct browser-to-API calls, URL state), code quality (AbortController, `r.ok`, prop mutation, key stability), security (URL encoding, OWASP Top 10), and style (next/image, devDependencies classification, type safety, semantic HTML).
+
+**Why `@anthropic-ai/sdk` in devDependencies:** The SDK is only needed in CI (via `npm ci` which installs devDependencies). It is never required at runtime in the browser or on the Next.js server.
+
+**Trigger:** `pull_request` (opened, synchronize, reopened) — automatic, no user action needed. Matches CodeRabbit behavior.
+
+**To activate:** Add `ANTHROPIC_API_KEY` as a repository secret in GitHub Settings → Secrets and variables → Actions.
+
+---
+
 ## ADR-006: Parallel CI Jobs for Generated Projects
 **Date:** 2026-05-24
 **Status:** Accepted
