@@ -29,6 +29,11 @@ describe("buildPackageJson", () => {
     expect(pkg.devDependencies["eslint-config-next"]).toBeDefined();
   });
 
+  it("includes @types/jest in devDependencies", () => {
+    const pkg = buildPackageJson("proj", "stmt");
+    expect(pkg.devDependencies["@types/jest"]).toBeDefined();
+  });
+
 
   it("includes required npm scripts", () => {
     const pkg = buildPackageJson("proj", "stmt");

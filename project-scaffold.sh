@@ -362,6 +362,7 @@ function buildPackageJson(projectName, problemStatement) {
       "eslint-config-next": "^14.2.0",
       prettier: "^3.2.5",
       jest: "^29.7.0",
+      "@types/jest": "^29.5.0",
       "@testing-library/react": "^15.0.6",
       "@testing-library/jest-dom": "^6.4.2",
       "@testing-library/user-event": "^14.5.2",
@@ -438,7 +439,7 @@ async function main() {
         "@components/*": ["./src/components/*"],
         "@hooks/*": ["./src/hooks/*"],
         "@lib/*": ["./src/lib/*"],
-        "@types/*": ["./src/types/*"],
+        "@t/*": ["./src/types/*"],
       },
     },
     include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
@@ -475,11 +476,11 @@ async function main() {
   write("src/types/index.ts", `export type WithClassName = {\n  className?: string;\n};\n\nexport type AsyncState<T> =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "success"; data: T }\n  | { status: "error"; error: string };\n`);
   commit("feat: add shared TypeScript types");
 
-  write("src/hooks/use-async.ts", `import { useState, useCallback } from "react";\nimport type { AsyncState } from "@types/index";\n\nexport function useAsync<T>() {\n  const [state, setState] = useState<AsyncState<T>>({ status: "idle" });\n\n  const run = useCallback(async (promise: Promise<T>) => {\n    setState({ status: "loading" });\n    try {\n      const data = await promise;\n      setState({ status: "success", data });\n      return data;\n    } catch (err) {\n      const error = err instanceof Error ? err.message : "Unknown error";\n      setState({ status: "error", error });\n      throw err;\n    }\n  }, []);\n\n  const reset = useCallback(() => setState({ status: "idle" }), []);\n  return { state, run, reset };\n}\n`);
+  write("src/hooks/use-async.ts", `import { useState, useCallback } from "react";\nimport type { AsyncState } from "@t/index";\n\nexport function useAsync<T>() {\n  const [state, setState] = useState<AsyncState<T>>({ status: "idle" });\n\n  const run = useCallback(async (promise: Promise<T>) => {\n    setState({ status: "loading" });\n    try {\n      const data = await promise;\n      setState({ status: "success", data });\n      return data;\n    } catch (err) {\n      const error = err instanceof Error ? err.message : "Unknown error";\n      setState({ status: "error", error });\n      throw err;\n    }\n  }, []);\n\n  const reset = useCallback(() => setState({ status: "idle" }), []);\n  return { state, run, reset };\n}\n`);
   commit("feat: add useAsync hook for typed async state");
 
-  write("jest.config.js", `const nextJest = require("next/jest");\nconst createJestConfig = nextJest({ dir: "./" });\nconst config = {\n  testEnvironment: "jest-environment-jsdom",\n  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],\n  moduleNameMapper: {\n    "^@/(.*)\$": "<rootDir>/src/\$1",\n    "^@components/(.*)\$": "<rootDir>/src/components/\$1",\n    "^@hooks/(.*)\$": "<rootDir>/src/hooks/\$1",\n    "^@lib/(.*)\$": "<rootDir>/src/lib/\$1",\n    "^@types/(.*)\$": "<rootDir>/src/types/\$1",\n  },\n};\nmodule.exports = createJestConfig(config);\n`);
-  write("jest.setup.js", `import "@testing-library/jest-dom";\n`);
+  write("jest.config.js", `const nextJest = require("next/jest");\nconst createJestConfig = nextJest({ dir: "./" });\nconst config = {\n  testEnvironment: "jest-environment-jsdom",\n  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],\n  moduleNameMapper: {\n    "^@/(.*)\$": "<rootDir>/src/\$1",\n    "^@components/(.*)\$": "<rootDir>/src/components/\$1",\n    "^@hooks/(.*)\$": "<rootDir>/src/hooks/\$1",\n    "^@lib/(.*)\$": "<rootDir>/src/lib/\$1",\n    "^@t/(.*)\$": "<rootDir>/src/types/\$1",\n  },\n};\nmodule.exports = createJestConfig(config);\n`);
+  write("jest.setup.ts", `import "@testing-library/jest-dom";\n\n// jsdom does not implement scrollIntoView\nwindow.HTMLElement.prototype.scrollIntoView = jest.fn();\n`);
   write(".github/workflows/ci.yml", `name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run lint\n\n  type-check:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run type-check\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm test\n`);
   commit("chore: configure tsconfig path aliases and jest");
 

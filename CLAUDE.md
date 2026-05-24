@@ -4,7 +4,7 @@
 A shell script installer (`project-scaffold.sh`) that drops a VS Code task-driven Next.js scaffolding workflow into any empty project folder. The three VS Code tasks call Node.js scripts that generate the full project setup, individual components, and a self-updating README.
 
 ## Current state
-All known gaps are fixed. 49 unit tests passing. See `CHANGELOG.md [Unreleased]` for what changed recently and `DECISIONS.md` for ADR-001 through ADR-007.
+All known gaps are fixed. 50 unit tests passing. See `CHANGELOG.md [Unreleased]` for what changed recently and `DECISIONS.md` for ADR-001 through ADR-007.
 
 ## Key files
 | File | Role |
