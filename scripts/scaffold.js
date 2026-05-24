@@ -175,7 +175,6 @@ async function main() {
   write(".github/workflows/ci.yml", `name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run lint\n\n  type-check:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run type-check\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm test\n`);
   commit("chore: configure tsconfig path aliases and jest");
 
-
   console.log("\n▸ Installing dependencies...");
   run("npm install");
   commit("chore: install dependencies");
@@ -198,8 +197,6 @@ async function main() {
 if (require.main === module) {
   main().catch((err) => {
     console.error("\n✗ Scaffold failed:", err.message);
-    if (err.stdout?.length) console.error("stdout:", err.stdout.toString());
-    if (err.stderr?.length) console.error("stderr:", err.stderr.toString());
     process.exit(1);
   });
 }
