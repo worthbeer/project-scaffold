@@ -36,7 +36,6 @@ describe("buildPackageJson", () => {
     expect(pkg.scripts.test).toBe("jest --passWithNoTests");
     expect(pkg.scripts.lint).toBe("next lint");
     expect(pkg.scripts["type-check"]).toBe("tsc --noEmit");
-    expect(pkg.scripts.review).toMatch(/pr-review\.js/);
   });
 
   it("marks the package as private", () => {

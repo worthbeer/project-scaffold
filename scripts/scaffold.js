@@ -34,7 +34,6 @@ function buildPackageJson(projectName, problemStatement) {
       "type-check": "tsc --noEmit",
       "gen:component": "node scripts/generate-component.js",
       "gen:readme": "node scripts/generate-readme.js",
-      "review": "git diff main...HEAD | node scripts/pr-review.js",
     },
     dependencies: {
       next: "^14.2.0",

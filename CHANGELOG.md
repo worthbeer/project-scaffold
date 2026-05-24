@@ -36,8 +36,6 @@
 ### Added
 - `.github/workflows/ci.yml` written into every generated project — runs `lint`, `type-check`, and `test` as parallel jobs on push/PR to main
 - `.github/workflows/ci.yml` added to the project-scaffold repo itself — runs `npm test` (the 44 unit tests) on push/PR to main
-- `scripts/pr-review.js` — Claude-powered PR reviewer installed by the installer; reads a unified diff from stdin (`git diff main...HEAD | node scripts/pr-review.js`), streams a structured code review (Summary → Findings → Verdict) via the `claude` CLI — no API key required, uses Claude Code's existing auth
-- `npm run review` added to every generated project — runs locally, zero credential setup
-- `🔍 Review PR` VS Code task added to every generated project
-- `ANTHROPIC_API_KEY=` documented in `.env.example` of every generated project
-- `@anthropic-ai/sdk ^0.39.0` added to devDependencies of every generated project
+- `scripts/pr-review.js` — Claude-powered PR reviewer for this repo; reads a unified diff from stdin, streams a structured code review (Summary → Findings → Verdict) via the `claude` CLI — no API key required, uses Claude Code's existing auth
+- `npm run review` added to this repo's `package.json` — runs `git diff main...HEAD | node scripts/pr-review.js`
+- Fixed `name: "project-scaffold"` in this repo's `package.json` (was `"/"`)
