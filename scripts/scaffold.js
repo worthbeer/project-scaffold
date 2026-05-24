@@ -34,6 +34,7 @@ function buildPackageJson(projectName, problemStatement) {
       "type-check": "tsc --noEmit",
       "gen:component": "node scripts/generate-component.js",
       "gen:readme": "node scripts/generate-readme.js",
+      "review": "git diff main...HEAD | node scripts/pr-review.js",
     },
     dependencies: {
       next: "^14.2.0",
@@ -139,7 +140,7 @@ async function main() {
   }, null, 2));
 
   write(".npmrc", `save-exact=true\naudit-level=high\nfund=false\n`);
-  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\n`);
+  write(".env.example", `NEXT_PUBLIC_APP_URL=http://localhost:3000\nANTHROPIC_API_KEY=           # needed for npm run review\n`);
   write(".env.local", `# Local env — not committed\n`);
   write(".gitignore", `/node_modules\n/.next\n/out\n.env.local\n.env*.local\n*.tsbuildinfo\n.DS_Store\n`);
   write(".prettierrc", JSON.stringify({ semi: true, singleQuote: false, tabWidth: 2, trailingComma: "es5", printWidth: 100 }, null, 2));
@@ -176,8 +177,6 @@ async function main() {
   write(".github/workflows/ci.yml", `name: CI\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run lint\n\n  type-check:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm run type-check\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - run: npm test\n`);
   commit("chore: configure tsconfig path aliases and jest");
 
-  write(".github/workflows/pr-review.yml", `name: PR Review\n\non:\n  pull_request:\n    types: [opened, synchronize, reopened]\n\njobs:\n  review:\n    runs-on: ubuntu-latest\n    permissions:\n      pull-requests: write\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - run: npm ci\n      - name: Get PR diff\n        run: gh pr diff \${{ github.event.number }} > /tmp/pr.diff\n        env:\n          GH_TOKEN: \${{ github.token }}\n      - name: Run Claude review\n        run: node scripts/pr-review.js < /tmp/pr.diff > /tmp/review.md\n        env:\n          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}\n      - name: Post review comment\n        run: gh pr comment \${{ github.event.number }} --body-file /tmp/review.md\n        env:\n          GH_TOKEN: \${{ github.token }}\n`);
-  commit("chore: add Claude PR reviewer");
 
   console.log("\n▸ Installing dependencies...");
   run("npm install");

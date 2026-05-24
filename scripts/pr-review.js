@@ -61,7 +61,8 @@ Be direct and specific. Reference actual code from the diff. If the diff is clea
 async function main() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.error("ANTHROPIC_API_KEY is not set");
+    console.error("ANTHROPIC_API_KEY is not set.");
+    console.error("Add it to .env.local or export it in your shell profile (~/.zshrc or ~/.bashrc).");
     process.exit(1);
   }
 

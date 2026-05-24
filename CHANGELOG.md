@@ -36,6 +36,8 @@
 ### Added
 - `.github/workflows/ci.yml` written into every generated project — runs `lint`, `type-check`, and `test` as parallel jobs on push/PR to main
 - `.github/workflows/ci.yml` added to the project-scaffold repo itself — runs `npm test` (the 44 unit tests) on push/PR to main
-- `scripts/pr-review.js` — Claude-powered PR reviewer installed by the installer; reads a unified diff from stdin, streams a structured code review (Summary → Findings → Verdict) to stdout via the Anthropic API
-- `.github/workflows/pr-review.yml` written into every generated project — triggers on PR open/sync, fetches the diff with `gh pr diff`, streams a review from `pr-review.js`, posts as a PR comment
-- `@anthropic-ai/sdk ^0.39.0` added to devDependencies of every generated project (required by `pr-review.js` in CI)
+- `scripts/pr-review.js` — Claude-powered PR reviewer installed by the installer; reads a unified diff from stdin (`git diff main...HEAD | node scripts/pr-review.js`), streams a structured code review (Summary → Findings → Verdict) to stdout via the Anthropic API
+- `npm run review` added to every generated project — local-only, key stays in `.env.local` or shell profile, no GitHub secret required
+- `🔍 Review PR` VS Code task added to every generated project
+- `ANTHROPIC_API_KEY=` documented in `.env.example` of every generated project
+- `@anthropic-ai/sdk ^0.39.0` added to devDependencies of every generated project

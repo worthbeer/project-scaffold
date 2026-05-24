@@ -64,9 +64,9 @@ Generated projects get an automated PR reviewer that posts a single summary comm
 
 **Why `@anthropic-ai/sdk` in devDependencies:** The SDK is only needed in CI (via `npm ci` which installs devDependencies). It is never required at runtime in the browser or on the Next.js server.
 
-**Trigger:** `pull_request` (opened, synchronize, reopened) — automatic, no user action needed. Matches CodeRabbit behavior.
+**Trigger:** Manual — `npm run review` or the `🔍 Review PR` VS Code task. The developer runs it locally before creating or merging a PR. The key stays in `.env.local` or shell profile and never touches GitHub.
 
-**To activate:** Add `ANTHROPIC_API_KEY` as a repository secret in GitHub Settings → Secrets and variables → Actions.
+**To activate:** Add `ANTHROPIC_API_KEY` to `.env.local` or your shell profile (`~/.zshrc` or `~/.bashrc`). The key never leaves your machine.
 
 ---
 
