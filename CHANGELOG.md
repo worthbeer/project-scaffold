@@ -29,3 +29,6 @@
 - `scripts/__tests__/scaffold.test.js` — unit tests for `buildPackageJson` shape, description field, and required devDependencies
 - All three scripts now export their core functions and guard CLI execution with `require.main === module` so they can be required by tests without side effects
 - `readline` interface in `scaffold.js` moved inside `main()` so requiring the module for tests does not hold stdin open
+
+### Fixed
+- `scaffold.js` now interleaves `write()` calls with `commit()` calls — previously all files were written before any commit, so only the first `git add -A` staged anything and every subsequent commit failed with "nothing to commit"; each commit now lands exactly the files it describes

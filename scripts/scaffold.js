@@ -63,8 +63,29 @@ function buildPackageJson(projectName, problemStatement) {
 }
 
 async function main() {
+  // Buffer lines that arrive before ask() is called — happens when stdin is a pipe
+  // rather than a TTY, because readline emits all line events synchronously before
+  // any await resumes.
+  const inputQueue = [];
+  const pendingResolvers = [];
+
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => new Promise((res) => rl.question(q, res));
+  rl.on("line", (line) => {
+    if (pendingResolvers.length > 0) {
+      pendingResolvers.shift()(line);
+    } else {
+      inputQueue.push(line);
+    }
+  });
+
+  const ask = (q) => new Promise((resolve) => {
+    process.stdout.write(q);
+    if (inputQueue.length > 0) {
+      resolve(inputQueue.shift());
+    } else {
+      pendingResolvers.push(resolve);
+    }
+  });
 
   console.log("\n╔══════════════════════════════════╗");
   console.log("║     Project Scaffold Workflow     ║");
@@ -85,7 +106,7 @@ async function main() {
     spawnSync("git", ["config", "user.email", authorEmail], { stdio: "inherit" });
   }
 
-  console.log("▸ Writing package.json...");
+  console.log("▸ Writing project files and seeding git history...");
   write("package.json", JSON.stringify(buildPackageJson(projectName, problemStatement), null, 2));
 
   write("tsconfig.json", JSON.stringify({
@@ -127,12 +148,6 @@ async function main() {
 
   write("CHANGELOG.md", `# Changelog\n\n## [Unreleased]\n\n### Added\n- Initial project scaffold\n- Base component architecture\n- TypeScript configuration with path aliases\n`);
 
-  write("src/lib/utils.ts", `import { clsx, type ClassValue } from "clsx";\nimport { twMerge } from "tailwind-merge";\n\nexport function cn(...inputs: ClassValue[]) {\n  return twMerge(clsx(inputs));\n}\n`);
-
-  write("src/types/index.ts", `export type WithClassName = {\n  className?: string;\n};\n\nexport type AsyncState<T> =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "success"; data: T }\n  | { status: "error"; error: string };\n`);
-
-  write("src/hooks/use-async.ts", `import { useState, useCallback } from "react";\nimport type { AsyncState } from "@types/index";\n\nexport function useAsync<T>() {\n  const [state, setState] = useState<AsyncState<T>>({ status: "idle" });\n\n  const run = useCallback(async (promise: Promise<T>) => {\n    setState({ status: "loading" });\n    try {\n      const data = await promise;\n      setState({ status: "success", data });\n      return data;\n    } catch (err) {\n      const error = err instanceof Error ? err.message : "Unknown error";\n      setState({ status: "error", error });\n      throw err;\n    }\n  }, []);\n\n  const reset = useCallback(() => setState({ status: "idle" }), []);\n  return { state, run, reset };\n}\n`);
-
   write("src/app/layout.tsx", `import type { Metadata } from "next";\nimport { Inter } from "next/font/google";\nimport "./globals.css";\n\nconst inter = Inter({ subsets: ["latin"] });\n\nexport const metadata: Metadata = {\n  title: "${projectName}",\n  description: "${problemStatement}",\n};\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang="en">\n      <body className={inter.className}>{children}</body>\n    </html>\n  );\n}\n`);
 
   write("src/app/globals.css", `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    --background: 0 0% 100%;\n    --foreground: 222.2 84% 4.9%;\n    --muted: 210 40% 96.1%;\n    --muted-foreground: 215.4 16.3% 46.9%;\n    --border: 214.3 31.8% 91.4%;\n    --radius: 0.5rem;\n  }\n}\n`);
@@ -143,15 +158,20 @@ async function main() {
 
   write("next.config.js", `/** @type {import('next').NextConfig} */\nconst nextConfig = {};\nmodule.exports = nextConfig;\n`);
   write("postcss.config.js", `module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };\n`);
+  write("src/components/index.ts", `// Component barrel — updated automatically by generate-component.js\n`);
+  commit("chore: initial project scaffold");
+
+  write("src/lib/utils.ts", `import { clsx, type ClassValue } from "clsx";\nimport { twMerge } from "tailwind-merge";\n\nexport function cn(...inputs: ClassValue[]) {\n  return twMerge(clsx(inputs));\n}\n`);
+  commit("feat: add cn utility and base lib layer");
+
+  write("src/types/index.ts", `export type WithClassName = {\n  className?: string;\n};\n\nexport type AsyncState<T> =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "success"; data: T }\n  | { status: "error"; error: string };\n`);
+  commit("feat: add shared TypeScript types");
+
+  write("src/hooks/use-async.ts", `import { useState, useCallback } from "react";\nimport type { AsyncState } from "@types/index";\n\nexport function useAsync<T>() {\n  const [state, setState] = useState<AsyncState<T>>({ status: "idle" });\n\n  const run = useCallback(async (promise: Promise<T>) => {\n    setState({ status: "loading" });\n    try {\n      const data = await promise;\n      setState({ status: "success", data });\n      return data;\n    } catch (err) {\n      const error = err instanceof Error ? err.message : "Unknown error";\n      setState({ status: "error", error });\n      throw err;\n    }\n  }, []);\n\n  const reset = useCallback(() => setState({ status: "idle" }), []);\n  return { state, run, reset };\n}\n`);
+  commit("feat: add useAsync hook for typed async state");
+
   write("jest.config.js", `const nextJest = require("next/jest");\nconst createJestConfig = nextJest({ dir: "./" });\nconst config = {\n  testEnvironment: "jest-environment-jsdom",\n  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],\n  moduleNameMapper: {\n    "^@/(.*)\$": "<rootDir>/src/\$1",\n    "^@components/(.*)\$": "<rootDir>/src/components/\$1",\n    "^@hooks/(.*)\$": "<rootDir>/src/hooks/\$1",\n    "^@lib/(.*)\$": "<rootDir>/src/lib/\$1",\n    "^@types/(.*)\$": "<rootDir>/src/types/\$1",\n  },\n};\nmodule.exports = createJestConfig(config);\n`);
   write("jest.setup.js", `import "@testing-library/jest-dom";\n`);
-  write("src/components/index.ts", `// Component barrel — updated automatically by generate-component.js\n`);
-
-  console.log("\n▸ Seeding git history...");
-  commit("chore: initial project scaffold");
-  commit("feat: add cn utility and base lib layer");
-  commit("feat: add shared TypeScript types");
-  commit("feat: add useAsync hook for typed async state");
   commit("chore: configure tsconfig path aliases and jest");
 
   console.log("\n▸ Installing dependencies...");
@@ -176,6 +196,8 @@ async function main() {
 if (require.main === module) {
   main().catch((err) => {
     console.error("\n✗ Scaffold failed:", err.message);
+    if (err.stdout?.length) console.error("stdout:", err.stdout.toString());
+    if (err.stderr?.length) console.error("stderr:", err.stderr.toString());
     process.exit(1);
   });
 }
