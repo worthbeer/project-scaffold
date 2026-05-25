@@ -33,5 +33,7 @@ Every non-trivial change goes in two places:
 ## Conventions
 Naming, component structure, API patterns, and testing rules live in `.claude/SKILL.md` and `.claude/skills/`. These are written into every generated project by the installer.
 
+Any new scripts added to this repo must be TypeScript. The existing `scripts/*.js` files are grandfathered.
+
 ## Stack (generated projects)
 Next.js 14 App Router · TypeScript · Tailwind CSS · React 18 · Jest + RTL + user-event · ESLint (next/core-web-vitals)
