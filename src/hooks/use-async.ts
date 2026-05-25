@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { AsyncState } from "@types/index";
+import type { AsyncState } from "@t/index";
 
 export function useAsync<T>() {
   const [state, setState] = useState<AsyncState<T>>({ status: "idle" });
